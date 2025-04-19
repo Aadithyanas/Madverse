@@ -1,9 +1,11 @@
 import { api } from "~/trpc/server";
 import { notFound } from "next/navigation";
+
+
 import Link from "next/link";
 import PokemonImage from "~/app/_components/PokemonImage";
 
-interface PageProps {
+type PageProps ={
   params: { slug: string };
 }
 

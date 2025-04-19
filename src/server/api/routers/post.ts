@@ -2,6 +2,7 @@ import { z } from "zod"
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc"
 import { db } from "~/server/db"
 import { Prisma } from "@prisma/client"
+import { TRPCError } from "@trpc/server"
 
 export const pokemonRouter = createTRPCRouter({
   create: publicProcedure
@@ -101,6 +102,51 @@ export const pokemonRouter = createTRPCRouter({
     } catch (error) {
       console.error("Error fetching Pokémon by types:", error)
       throw new Error("Failed to filter Pokémon by types")
+    }
+  }),
+  getBySlug: publicProcedure
+  .input(z.object({ 
+    slug: z.string().min(1, "Slug cannot be empty")
+  }))
+  .query(async ({ input }) => {
+    try {
+      console.log("hi")
+      const pokemon = await db.pokemon.findUnique({
+        where: { 
+          slug: input.slug 
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          types: true,
+          abilities: true,
+          weekness: true,
+          description: true,
+          category: true,
+          sprite: true,
+          // Add other fields you want to expose
+        }
+      });
+
+      if (!pokemon) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `Pokemon with slug "${input.slug}" not found`,
+        });
+      }
+
+      return pokemon;
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch Pokemon',
+        cause: error,
+      });
     }
   }),
 })

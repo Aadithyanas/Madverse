@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { api } from "~/trpc/react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Search, X, AlertCircle, RotateCw } from "lucide-react"
@@ -28,35 +28,46 @@ export default function SearchPokemons() {
     refetch,
   } = api.pokemon.getManyByName.useQuery(names, {
     enabled: names.length > 0,
+    retry: false,
   })
+
+  // Handle error separately using useEffect
+  useEffect(() => {
+    if (queryError) {
+      console.error("Search error:", queryError)
+    }
+  }, [queryError])
 
   useEffect(() => {
     const timer = setTimeout(() => setIsInitialLoad(false), 1500)
     return () => clearTimeout(timer)
   }, [])
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     if (!input.trim()) return
 
     const parsedNames = input
       .split(",")
       .map((name) => name.trim().toLowerCase())
       .filter((name) => name.length > 0)
-    setNames(parsedNames)
-  }
 
-  const handleClear = () => {
+    if (parsedNames.length > 0) {
+      setNames(parsedNames)
+    }
+  }, [input])
+
+  const handleClear = useCallback(() => {
     setInput("")
     setNames([])
-  }
+  }, [])
 
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     try {
       await refetch()
     } catch (err) {
       console.error("Failed to refetch:", err)
     }
-  }
+  }, [refetch])
 
   // Animation variants
   const containerVariants = {
@@ -83,91 +94,106 @@ export default function SearchPokemons() {
     tap: { scale: 0.98 },
   }
 
-  const typeColorMap: Record<string, string> = {
-    normal: "bg-gray-300 text-gray-800",
-    fire: "bg-red-400 text-white",
-    water: "bg-blue-400 text-white",
-    electric: "bg-yellow-400 text-gray-800",
-    grass: "bg-green-400 text-white",
-    ice: "bg-cyan-200 text-gray-800",
-    fighting: "bg-red-600 text-white",
-    poison: "bg-purple-500 text-white",
-    ground: "bg-amber-500 text-white",
-    flying: "bg-indigo-300 text-gray-800",
-    psychic: "bg-pink-400 text-white",
-    bug: "bg-lime-400 text-gray-800",
-    rock: "bg-amber-700 text-white",
-    ghost: "bg-purple-700 text-white",
-    dragon: "bg-gradient-to-r from-purple-600 to-red-500 text-white",
-    dark: "bg-gray-700 text-white",
-    steel: "bg-gray-400 text-gray-800",
-    fairy: "bg-pink-200 text-gray-800",
-  }
-
-  const renderPokemonCard = (pokemon: Pokemon) => (
-    <motion.div
-      key={pokemon.id}
-      variants={cardVariants}
-      whileHover="hover"
-      whileTap="tap"
-      className="p-6 border border-gray-200 rounded-xl shadow-sm w-[80%] mx-auto bg-white backdrop-blur-sm hover:shadow-md transition-shadow"
-    >
-      <div className="flex flex-col sm:flex-row items-start gap-6">
-        <motion.div
-          whileHover={{ rotate: 5, scale: 1.1 }}
-          whileTap={{ rotate: -5, scale: 0.95 }}
-          className="shrink-0 self-center"
-        >
-          <Image
-            src={pokemon.sprite ?? "/placeholder.svg"}
-            alt={pokemon.name}
-            width={96}
-            height={96}
-            className="w-24 h-24 object-contain drop-shadow-md"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.src = "/pokeball.png"
-            }}
-          />
-        </motion.div>
-        <div className="flex-1 w-full">
-          <div className="flex justify-between items-start">
-            <h3 className="text-2xl font-bold text-gray-900 mb-1 capitalize">{pokemon.name}</h3>
-            <span className="text-sm font-mono text-gray-500">#{String(pokemon.id).padStart(3, "0")}</span>
-          </div>
-          <p className="text-sm text-gray-600 mb-3 italic">{pokemon.category}</p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {pokemon.types.map((type) => (
-              <motion.span
-                key={`${pokemon.id}-${type}`}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 500 }}
-                className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${typeColorMap[type.toLowerCase()] ?? "bg-indigo-100 text-gray-800"}`}
-              >
-                {type}
-              </motion.span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </motion.div>
+  const typeColorMap = useMemo<Record<string, string>>(
+    () => ({
+      normal: "bg-gray-300 text-gray-800",
+      fire: "bg-red-400 text-white",
+      water: "bg-blue-400 text-white",
+      electric: "bg-yellow-400 text-gray-800",
+      grass: "bg-green-400 text-white",
+      ice: "bg-cyan-200 text-gray-800",
+      fighting: "bg-red-600 text-white",
+      poison: "bg-purple-500 text-white",
+      ground: "bg-amber-500 text-white",
+      flying: "bg-indigo-300 text-gray-800",
+      psychic: "bg-pink-400 text-white",
+      bug: "bg-lime-400 text-gray-800",
+      rock: "bg-amber-700 text-white",
+      ghost: "bg-purple-700 text-white",
+      dragon: "bg-gradient-to-r from-purple-600 to-red-500 text-white",
+      dark: "bg-gray-700 text-white",
+      steel: "bg-gray-400 text-gray-800",
+      fairy: "bg-pink-200 text-gray-800",
+    }),
+    [],
   )
 
-  const renderSkeleton = () => (
-    <motion.div variants={cardVariants} className="p-6 border border-gray-200 rounded-xl bg-white/80">
-      <div className="flex flex-col sm:flex-row items-start gap-6">
-        <div className="shrink-0 w-24 h-24 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="flex-1 w-full space-y-3">
-          <div className="h-7 w-3/4 bg-gray-200 rounded animate-pulse" />
-          <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-          <div className="flex gap-2">
-            <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse" />
-            <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse" />
+  const renderPokemonCard = useCallback(
+    (pokemon: Pokemon) => {
+      // Use a fallback image if the sprite URL is from an unconfigured domain
+      const imageUrl = pokemon.sprite || "/placeholder.svg"
+
+      return (
+        <motion.div
+          key={pokemon.id}
+          variants={cardVariants}
+          whileHover="hover"
+          whileTap="tap"
+          className="p-6 border border-gray-200 rounded-xl shadow-sm w-[80%] mx-auto bg-white backdrop-blur-sm hover:shadow-md transition-shadow"
+        >
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <motion.div
+              whileHover={{ rotate: 5, scale: 1.1 }}
+              whileTap={{ rotate: -5, scale: 0.95 }}
+              className="shrink-0 self-center"
+            >
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={pokemon.name}
+                width={96}
+                height={96}
+                className="w-24 h-24 object-contain drop-shadow-md"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = "/pokeball.png"
+                }}
+                unoptimized={imageUrl.includes("pokemon.com")}
+              />
+            </motion.div>
+            <div className="flex-1 w-full">
+              <div className="flex justify-between items-start">
+                <h3 className="text-2xl font-bold text-gray-900 mb-1 capitalize">{pokemon.name}</h3>
+                <span className="text-sm font-mono text-gray-500">#{String(pokemon.id).padStart(3, "0")}</span>
+              </div>
+              <p className="text-sm text-gray-600 mb-3 italic">{pokemon.category}</p>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {pokemon.types.map((type) => (
+                  <motion.span
+                    key={`${pokemon.id}-${type}`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 500 }}
+                    className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${typeColorMap[type.toLowerCase()] ?? "bg-indigo-100 text-gray-800"}`}
+                  >
+                    {type}
+                  </motion.span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )
+    },
+    [typeColorMap],
+  )
+
+  const renderSkeleton = useCallback(
+    () => (
+      <motion.div variants={cardVariants} className="p-6 border border-gray-200 rounded-xl bg-white/80">
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="shrink-0 w-24 h-24 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="flex-1 w-full space-y-3">
+            <div className="h-7 w-3/4 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
+            <div className="flex gap-2">
+              <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse" />
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    ),
+    [],
   )
 
   // Improved type guard with better safety checks
@@ -200,7 +226,7 @@ export default function SearchPokemons() {
         >
           <motion.span
             animate={{ rotate: [0, 15, -15, 0] }}
-            transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2, delay: 2 }}
+            transition={{ repeat: 3, duration: 2, delay: 2 }}
             className="inline-block"
           >
             🔍
@@ -391,7 +417,7 @@ export default function SearchPokemons() {
                   rotate: [0, 5, -5, 0],
                 }}
                 transition={{
-                  repeat: Number.POSITIVE_INFINITY,
+                  repeat: 5,
                   duration: 3,
                   ease: "easeInOut",
                 }}
@@ -410,3 +436,4 @@ export default function SearchPokemons() {
     </div>
   )
 }
+ 

@@ -62,9 +62,12 @@ export const pokemonRouter = createTRPCRouter({
     if (!input.length) return []
 
     try {
+      // Limit the number of names to search for to prevent performance issues
+      const limitedInput = input.slice(0, 10)
+
       const pokemons = await db.pokemon.findMany({
         where: {
-          OR: input.map((name) => ({
+          OR: limitedInput.map((name) => ({
             name: {
               contains: name,
               mode: "insensitive",
@@ -72,6 +75,8 @@ export const pokemonRouter = createTRPCRouter({
           })),
         },
         orderBy: { id: "asc" },
+        // Add a limit to prevent returning too many results
+        take: 20,
       })
 
       return pokemons

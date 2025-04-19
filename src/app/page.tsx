@@ -1,7 +1,5 @@
-import Link from "next/link";
 
-
-import { api, HydrateClient } from "~/trpc/server";
+import { HydrateClient } from "~/trpc/server";
 import { CreatePokemonForm } from "./_components/post";
 
 export default async function Home() {

@@ -1,120 +1,101 @@
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { db } from "~/server/db";
+import { z } from "zod"
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc"
+import { db } from "~/server/db"
+import { Prisma } from "@prisma/client"
 
 export const pokemonRouter = createTRPCRouter({
   create: publicProcedure
     .input(
       z.object({
-        name: z.string(),
-        slug: z.string(),
+        name: z.string().min(2).max(50),
+        slug: z.string().regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
         types: z.array(z.string()),
-        abilities:z.string(),
-        weekness:z.array(z.string()),
-        description:z.string(),
+        abilities: z.string(),
+        weekness: z.array(z.string()),
+        description: z.string().min(10).max(500),
         category: z.string(),
-        sprite: z.string(),
-      })
+        sprite: z.string().url("Please provide a valid URL"),
+      }),
     )
     .mutation(async ({ input }) => {
-      const newPokemon = await db.pokemon.create({
-        data: {
-          name: input.name,
-          slug: input.slug,
-          types: input.types,
-          abilities:input.abilities,
-          weekness:input.weekness,
-          description:input.description,
-          category: input.category,
-          sprite: input.sprite,
-        },
-      });
-      return newPokemon;
+      try {
+        const newPokemon = await db.pokemon.create({
+          data: {
+            name: input.name,
+            slug: input.slug,
+            types: input.types,
+            abilities: input.abilities,
+            weekness: input.weekness,
+            description: input.description,
+            category: input.category,
+            sprite: input.sprite,
+          },
+        })
+        return newPokemon
+      } catch (error) {
+        // Type check if this is a Prisma error with a code property
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          // Now TypeScript knows this is a Prisma error with the code property
+          if (error.code === "P2002") {
+            const target = (error.meta?.target as string[]) ?? ["property"]
+            throw new Error(`A Pokémon with this ${target[0]} already exists`)
+          }
+        }
+        // Re-throw the error if it's not a constraint violation
+        throw error
+      }
     }),
 
   getAll: publicProcedure.query(async () => {
-    const allPokemons = await db.pokemon.findMany();
-    return allPokemons;
-  }),
-
-  
-  getManyByName: publicProcedure
-  .input(z.array(z.string())) 
-  .query(async ({ input }) => {
-    console.log("Input names:", input);
-    // const allPokemon = await db.pokemon.findMany();
-    //   console.log(allPokemon.map(p => p.name));
-
-    const pokemons = await db.pokemon.findMany({
-      where: {
-        OR: input.map(name => ({
-          name: {
-            contains: name,
-            mode: 'insensitive',
-          }
-        }))
-      }
-    });
-
-    return pokemons;
-  }),
-
-  getByTypes:publicProcedure
-  .input(z.array(z.string()))
-  .query(async({input})=>{
-    return await db.pokemon.findMany({
-      where:{
-        types:{
-              hasSome:input,
-        }
-      }
-    })
-  }),
-
-  getBySlug: publicProcedure
-  .input(z.object({ 
-    slug: z.string().min(1, "Slug cannot be empty")
-  }))
-  .query(async ({ input }) => {
     try {
-      console.log("hi")
-      const pokemon = await db.pokemon.findUnique({
-        where: { 
-          slug: input.slug 
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          types: true,
-          abilities: true,
-          weekness: true,
-          description: true,
-          category: true,
-          sprite: true,
-          // Add other fields you want to expose
-        }
-      });
-
-      if (!pokemon) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Pokemon with slug "${input.slug}" not found`,
-        });
-      }
-
-      return pokemon;
+      const allPokemons = await db.pokemon.findMany({
+        orderBy: { name: "asc" },
+      })
+      return allPokemons
     } catch (error) {
-      if (error instanceof TRPCError) {
-        throw error;
-      }
-      
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to fetch Pokemon',
-        cause: error,
-      });
+      console.error("Error fetching all Pokémon:", error)
+      throw new Error("Failed to fetch Pokémon collection")
     }
   }),
-});
+
+  getManyByName: publicProcedure.input(z.array(z.string())).query(async ({ input }) => {
+    if (!input.length) return []
+
+    try {
+      const pokemons = await db.pokemon.findMany({
+        where: {
+          OR: input.map((name) => ({
+            name: {
+              contains: name,
+              mode: "insensitive",
+            },
+          })),
+        },
+        orderBy: { id: "asc" },
+      })
+
+      return pokemons
+    } catch (error) {
+      console.error("Error fetching Pokémon by name:", error)
+      throw new Error("Failed to search for Pokémon")
+    }
+  }),
+
+  getByTypes: publicProcedure.input(z.array(z.string())).query(async ({ input }) => {
+    if (!input.length) return []
+
+    try {
+      return await db.pokemon.findMany({
+        where: {
+          types: {
+            hasSome: input,
+          },
+        },
+        orderBy: { name: "asc" },
+      })
+    } catch (error) {
+      console.error("Error fetching Pokémon by types:", error)
+      throw new Error("Failed to filter Pokémon by types")
+    }
+  }),
+})

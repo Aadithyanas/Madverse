@@ -4,12 +4,7 @@ import Link from "next/link";
 import PokemonImage from "~/app/_components/PokemonImage";
 import type { Metadata } from 'next';
 
-interface Props {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
     const pokemon = await api.pokemon.getBySlug({ slug: params.slug });
     return {
@@ -24,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function PokemonDetailPage({ params }: Props) {
+export default async function PokemonDetailPage({ params }: { params: { slug: string } }) {
   let pokemon;
   
   try {

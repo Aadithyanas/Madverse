@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { api } from "~/trpc/react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, Search, X, AlertCircle, RotateCw } from "lucide-react"
+import { Loader2, Search, AlertCircle, RotateCw } from "lucide-react"
 import Image from "next/image"
 
 interface Pokemon {
@@ -129,7 +129,7 @@ export default function SearchPokemons() {
           variants={cardVariants}
           whileHover="hover"
           whileTap="tap"
-          className="p-6 border border-gray-200 rounded-xl shadow-sm w-[80%] mx-auto bg-white backdrop-blur-sm hover:shadow-md transition-shadow"
+          className="p-6 border border-gray-200 rounded-xl shadow-sm w-[80%] mx-auto bg-gray-400 backdrop-blur-sm hover:shadow-md transition-shadow"
         >
           <div className="flex flex-col sm:flex-row items-start gap-6">
             <motion.div
@@ -153,9 +153,9 @@ export default function SearchPokemons() {
             <div className="flex-1 w-full">
               <div className="flex justify-between items-start">
                 <h3 className="text-2xl font-bold text-gray-900 mb-1 capitalize">{pokemon.name}</h3>
-                <span className="text-sm font-mono text-gray-500">#{String(pokemon.id).padStart(3, "0")}</span>
+                <span className="text-sm font-mono text-gray-900">#{String(pokemon.id).padStart(3, "0")}</span>
               </div>
-              <p className="text-sm text-gray-600 mb-3 italic">{pokemon.category}</p>
+              <p className="text-sm text-red-600 mb-3 italic">{pokemon.category}</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {pokemon.types.map((type) => (
                   <motion.span
@@ -211,7 +211,7 @@ export default function SearchPokemons() {
   }
 
   return (
-    <div className="max-w-full mx-auto p-4 min-h-screen bg-gray-100">
+    <div className="max-w-full mx-auto p-4 min-h-screen bg-gray-800">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -222,7 +222,7 @@ export default function SearchPokemons() {
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: isInitialLoad ? 1.7 : 0 }}
-          className="text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2"
+          className="text-3xl font-bold text-yellow-300 mb-2 flex items-center justify-center gap-2"
         >
           <motion.span
             animate={{ rotate: [0, 15, -15, 0] }}
@@ -237,7 +237,7 @@ export default function SearchPokemons() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: isInitialLoad ? 1.9 : 0.2 }}
-          className="text-gray-600 max-w-md mx-auto"
+          className="text-gray-200 max-w-md mx-auto"
         >
           Search Pokémon by name (comma separated for multiple)
         </motion.p>
@@ -255,7 +255,7 @@ export default function SearchPokemons() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="e.g. Pikachu, Bulbasaur, Charmander"
-            className="flex-1 px-6 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-700 placeholder-gray-400 pr-10"
+            className="flex-1 px-6 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-300 placeholder-gray-400 pr-10"
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
           {input && (
@@ -269,7 +269,7 @@ export default function SearchPokemons() {
               className="absolute right-24 top-3 text-gray-500 hover:text-gray-700"
               aria-label="Clear input"
             >
-              <X className="h-5 w-5" />
+             
             </motion.button>
           )}
           <motion.button
